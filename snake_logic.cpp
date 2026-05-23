@@ -16,7 +16,7 @@ class snake_logic {
         int speed{ 100 }; //움직이는 간격 100ms단위
         int length{ 3 }; //뱀 길이
         int max_length{ 361 }; // 스테이지마다 설정 필요
-        char dir{ 'R' }; // 방향
+        char dir{ 'L' }; // 방향
         
         
         void move() { // 뱀 이동 함수
