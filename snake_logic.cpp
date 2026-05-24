@@ -1,12 +1,13 @@
 #include <conio.h>
 #include <chrono>
-//#include <iostream>
+//#include <snake_logic.h>
 using namespace std;
 using namespace std::chrono;
 
 const int SIZE = 21;
 
 extern int map[SIZE][SIZE]; //map 소스파일에서 가져오기
+int gate_arr[5][2][2]{ {{5,5},{7,7}} };
  
 
 class snake_logic {
@@ -19,25 +20,27 @@ class snake_logic {
         char dir{ 'L' }; // 방향
         
         
+        void to_loc(int& x1,int& y1,int x2,int y2) {
+            if (dir == 'R') { x1 = x2 + 1; y1 = y2; } //진행방향 앞의 물질 확인을 위한 변수 할당 
+            else if (dir == 'L') { x1 = x2 - 1; y1 = y2; }
+            else if (dir == 'U') { x1 = x2; y1 = y2 - 1; }
+            else if (dir == 'D') { x1 = x2; y1 = y2 + 1; }
+
+        }
         void move() { // 뱀 이동 함수
             if (duration_cast<milliseconds>(steady_clock::now() - tick).count() >= speed) { //이동로직 구현 -> (현재 틱- 이전 틱) >= 설정된 틱 간격인지 확인
                 //이동로직 시작
                 int front[2] {};
-                if (dir == 'R') { front[0] = body[0][0]+1; front[1] = body[0][1]; } //진행방향 앞의 물질 확인을 위한 변수 할당 
-                else if (dir == 'L') { front[0] = body[0][0]-1; front[1] = body[0][1]; }
-                else if (dir == 'U') { front[0] = body[0][0]; front[1] = body[0][1]-1; }
-                else if (dir == 'D') { front[0] = body[0][0]; front[1] = body[0][1]+1; }
+                to_loc(front[0], front[1], body[0][0], body[0][1]);
+                
 
-                if ((map[front[1]][front[0]] == '1') || (map[front[1]][front[0]] == '2') || (map[front[1]][front[0]] == '4')) { //앞이 벽이나 뱀의 몸통인 경우
+                if ((map[front[1]][front[0]] == 1) || (map[front[1]][front[0]] == 2) || (map[front[1]][front[0]] == 4)) { //앞이 벽이나 뱀의 몸통인 경우
                     //게임 종료 함수 호출
-                }
-                else if ((map[front[1]][front[0]] == '5')) { //앞이 gate인 경우 / 일단 게이트가 하나만 존재한다고 상정 
-                    gate(front[1],front[0]); //아직 미구현
                 }
                 else { //앞이 벽이 아닐 때 
                     int eat {};
+                    if (map[front[1]][front[0]] == 5) getGate(front[0],front[1]); // 앞이 게이트 일 때
                     getApple(map[front[1]][front[0]],eat); //앞에 사과가 있는지를 확인
-                    
                     for(int i = length; i > 0; i--){ //뱀의 이동 구현
                         body[i][0] = body[i-1][0];
                         body[i][1] = body[i-1][1];
@@ -79,13 +82,99 @@ class snake_logic {
             //게임 종료 함수 호출
             }
         }
-        void gate(int y, int x){ //게이트 이동 함수 / 아직 미구현
-            int UDLR[4]{};
+        void getGate(int& x, int& y){ //게이트 이동 함수 
+            int door[2] = {};
+            int front[2];
+            bool is_found = false;
+            for(int i = 0; i < 5; i++){
+                for (int j = 0; j < 2; j++) {
+                    if ((x == gate_arr[i][j][0]) && (y == gate_arr[i][j][1])){
+                        is_found = true;
+                        door[0] = i;
+                        if (j == 1) door[1] = 0;
+                        else door[1] = 1;
+                        break;
+                    }
+
+                }
+                if (is_found) break;
+            }
+            for (int i = 0; i < 4; i++) {
+                to_loc(front[0],front[1],gate_arr[door[0]][door[1]][0],gate_arr[door[0]][door[1]][1]);//진행방향 앞의 물질 확인
+                if ((map[front[1]][front[0]] == 1)||( map[front[1]][front[0]] == 2)){
+                    if (dir == 'R') {
+                        switch (i) {
+                            case 0:
+                                dir = 'U';
+                                break;
+                            case 1:
+                                dir = 'L';
+                                break;
+                            case 2:
+                                dir = 'U';
+                                break;
+
+                        }
+                    }
+                    else if (dir == 'L'){
+                        switch (i) {
+                            case 0:
+                                dir = 'D';
+                                break;
+                            case 1:
+                                dir = 'R';
+                                break;
+                            case 2:
+                                dir = 'D';
+                                break;
+
+                        }
+                    }                            
+                    else if (dir == 'U') {
+                        switch (i) {
+                        case 0:
+                            dir = 'R';
+                            break;
+                        case 1:
+                            dir = 'D';
+                            break;
+                        case 2:
+                            dir = 'R';
+                            break;
+
+                        }
+                    }
+                    else if (dir == 'D') {
+                        switch (i) {
+                        case 0:
+                            dir = 'L';
+                            break;
+                        case 1:
+                            dir = 'U';
+                            break;
+                        case 2:
+                            dir = 'L';
+                            break;
+
+                        }
+                    }
+                    
+                }
+                else if (map[front[1]][front[0]] == 5){
+                    //게임 종료 함수 호출
+                    break;
+                }
+                else{
+                    x = front[0];
+                    y = front[1];
+                    break;
+                }
 
 
+            }
 
         }
         
 };
 
-//블럭 정리 1: 벽, 2: 무조건 벽, 3: 뱀 머리, 4: 뱀 몸통, 5: 게이트, 6: 사과, 7: 독사과
+//블럭 정리 1: 벽, 2: 무조건 벽, 3: 뱀 머리, 4: 뱀 몸통, 5: 게이트, 6: 사과, 7: 독사과, 8: 스피드사과, 9: 미끄러짐 벽
