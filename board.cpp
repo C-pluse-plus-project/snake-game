@@ -1,14 +1,10 @@
-/*
- * board.cpp
- * Board 클래스의 멤버 함수를 구현하는 파일입니다.
- * 기본 맵을 생성하고 ncurses 화면에 출력하는 역할을 합니다.
- */
-
 #include "board.h"
 
+int map[BOARD_SIZE][BOARD_SIZE];
+
 Board::Board() {
-    const int initialMap[SIZE][SIZE] = {
-        {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
+    const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
+        {2,1,1,1,1,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,2},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -18,7 +14,7 @@ Board::Board() {
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-        {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+        {5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -31,15 +27,15 @@ Board::Board() {
         {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2}
     };
 
-    for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE; x++) {
             map[y][x] = initialMap[y][x];
         }
     }
 }
 
 int Board::getSize() const {
-    return SIZE;
+    return BOARD_SIZE;
 }
 
 int Board::getCell(const int y, const int x) const {
@@ -55,15 +51,19 @@ bool Board::isWall(const int y, const int x) const {
 }
 
 void Board::draw() const {
-    for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE; x++) {
             char ch = ' ';
 
-            if (map[y][x] == 0) ch = ' ';
-            else if (map[y][x] == 1) ch = '#';
+            if (map[y][x] == 1) ch = '#';
             else if (map[y][x] == 2) ch = 'X';
             else if (map[y][x] == 3) ch = 'H';
             else if (map[y][x] == 4) ch = 'B';
+            else if (map[y][x] == 5) ch = 'G';
+            else if (map[y][x] == 6) ch = '+';
+            else if (map[y][x] == 7) ch = '-';
+            else if (map[y][x] == 8) ch = 'S';
+            else if (map[y][x] == 9) ch = '~';
 
             mvprintw(y + 1, x * 2 + 1, "%c ", ch);
         }
