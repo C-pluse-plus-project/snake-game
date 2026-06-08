@@ -10,6 +10,8 @@ class Board {
 public:
     Board();
 
+    void loadMap(int stage);
+
     int getSize() const;
     int getCell(const int y, const int x) const;
     void setCell(const int y, const int x, const int value);
