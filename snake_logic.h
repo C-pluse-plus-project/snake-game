@@ -19,6 +19,7 @@ public:
     bool gameOver{ false };
     bool missionClear{ false };
 
+    void loadFromMap();
     void to_loc(int& x1, int& y1, int x2, int y2) const;
     void move(ScoreManager& score, ItemManager& items);
     void turn(int key);
