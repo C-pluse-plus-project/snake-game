@@ -119,3 +119,34 @@ void snake_logic::getGate(int& x, int& y) {
         dir = 'D';
     }
 }
+
+
+void snake_logic::loadFromMap() {
+    int count = 0;
+
+    for(int y=0; y<SIZE; y++){
+        for(int x=0; x<SIZE; x++){
+            if(map[y][x] == SNAKE_HEAD){
+                body[0][0] = x;
+                body[0][1] = y;
+            }
+        }
+    }
+
+    for(int y=0; y<SIZE; y++){
+        for(int x=0; x<SIZE; x++){
+            if(map[y][x] == SNAKE_BODY){
+                count++;
+                body[count][0] = x;
+                body[count][1] = y;
+            }
+        }
+    }
+
+    length = count + 1;
+    speed = 120;
+    dir = 'L';
+    gameOver = false;
+    missionClear = false;
+    tick = steady_clock::now();
+}
