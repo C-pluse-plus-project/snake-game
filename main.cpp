@@ -10,6 +10,8 @@ private:
     ItemManager items;
     ScoreManager score;
     bool running;
+    int currentStage;
+    static const int LAST_STAGE = 4;
 
     void initScreen() {
         initscr();
@@ -25,11 +27,42 @@ private:
         endwin();
     }
 
+    void nextStage() {
+        if (currentStage >= LAST_STAGE) {
+            running = false;
+            return;
+        }
+
+        currentStage++;
+        board.loadMap(currentStage);
+        snake.loadFromMap();
+        items = ItemManager();
+        score = ScoreManager();
+        nodelay(stdscr, TRUE);
+    }
+
     void handleInput() {
         const int key = getch();
 
         if (key == 'q' || key == 'Q') {
             running = false;
+            return;
+        }
+        
+        // 다음 맵으로 넘어가는 치트키(비활성화 해놓음)
+        // if (key == 'c' || key == 'C') {
+        //   nextStage();
+        //   return;
+        // }
+
+        if (snake.missionClear) {
+            if (key == 'n' || key == 'N') {
+                nextStage();
+            }
+            return;
+        }
+
+        if (snake.gameOver) {
             return;
         }
 
@@ -49,9 +82,10 @@ private:
     void drawInfo() const {
         const int y = board.getSize();
 
-        mvprintw(y + 3, 1, "Arrows/WASD: move | q: quit");
-        mvprintw(y + 4, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed");
-        mvprintw(y + 5, 1, "Direction: %c | Speed: %dms", snake.dir, snake.speed);
+        mvprintw(y + 3, 1, "Stage: %d / %d", currentStage, LAST_STAGE);
+        mvprintw(y + 4, 1, "Arrows/WASD: move | q: quit");
+        mvprintw(y + 5, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed");
+        mvprintw(y + 6, 1, "Direction: %c | Speed: %dms", snake.dir, snake.speed);
     }
 
     void render() const {
@@ -64,17 +98,22 @@ private:
         drawInfo();
 
         if (snake.gameOver) {
-            mvprintw(board.getSize() + 7, 1, "Game Over - press q to exit");
+            mvprintw(board.getSize() + 8, 1, "Game Over - press q to exit");
         }
         else if (snake.missionClear) {
-            mvprintw(board.getSize() + 7, 1, "Mission Clear - press q to exit");
+            if (currentStage < LAST_STAGE) {
+                mvprintw(board.getSize() + 8, 1, "Mission Clear - press n for next stage");
+            }
+            else {
+                mvprintw(board.getSize() + 8, 1, "All Stages Clear - press q to exit");
+            }
         }
 
         refresh();
     }
 
 public:
-    GameManager() : running(true) {}
+    GameManager() : running(true), currentStage(1) { snake.loadFromMap(); }
 
     void run() {
         initScreen();
