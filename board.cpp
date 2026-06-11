@@ -1,9 +1,70 @@
 #include "board.h"
+#include "item_score.h"
+
+#include <algorithm>
+#include <chrono>
+#include <random>
+#include <utility>
+#include <vector>
 
 int map[BOARD_SIZE][BOARD_SIZE];
 
+namespace {
+std::mt19937& gateRng() {
+    static std::mt19937 rng(
+        static_cast<unsigned int>(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    return rng;
+}
+
+bool canEnterFromGate(int y, int x) {
+    if (y < 0 || y >= BOARD_SIZE || x < 0 || x >= BOARD_SIZE) {
+        return false;
+    }
+
+    const int cell = map[y][x];
+    return cell != WALL &&
+           cell != IMMUNE_WALL &&
+           cell != GATE &&
+           cell != SNAKE_HEAD &&
+           cell != SNAKE_BODY;
+}
+
+bool hasGateExit(int y, int x) {
+    if (y == 0) return canEnterFromGate(y + 1, x);
+    if (y == BOARD_SIZE - 1) return canEnterFromGate(y - 1, x);
+    if (x == 0) return canEnterFromGate(y, x + 1);
+    if (x == BOARD_SIZE - 1) return canEnterFromGate(y, x - 1);
+
+    return canEnterFromGate(y - 1, x) ||
+           canEnterFromGate(y + 1, x) ||
+           canEnterFromGate(y, x - 1) ||
+           canEnterFromGate(y, x + 1);
+}
+
+void placeRandomGates() {
+    std::vector<std::pair<int, int>> wallCells;
+
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE; x++) {
+            if (map[y][x] == WALL && hasGateExit(y, x)) {
+                wallCells.push_back({ y, x });
+            }
+        }
+    }
+
+    if (wallCells.size() < 2) {
+        return;
+    }
+
+    std::shuffle(wallCells.begin(), wallCells.end(), gateRng());
+    map[wallCells[0].first][wallCells[0].second] = GATE;
+    map[wallCells[1].first][wallCells[1].second] = GATE;
+}
+}
+
 const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
-    {2,1,1,1,1,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,2},
+    {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -13,7 +74,7 @@ const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -28,7 +89,7 @@ const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
 
 
 const int secondMap[BOARD_SIZE][BOARD_SIZE] = {
-    {2,1,1,1,1,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,2},
+    {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -38,7 +99,7 @@ const int secondMap[BOARD_SIZE][BOARD_SIZE] = {
     {1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -53,7 +114,7 @@ const int secondMap[BOARD_SIZE][BOARD_SIZE] = {
 
 
 const int thirdMap[BOARD_SIZE][BOARD_SIZE] = {
-    {2,1,1,1,1,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,2},
+    {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -63,7 +124,7 @@ const int thirdMap[BOARD_SIZE][BOARD_SIZE] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,4,4,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,2,0,1},
@@ -79,7 +140,7 @@ const int thirdMap[BOARD_SIZE][BOARD_SIZE] = {
 
 
 const int fourthMap[BOARD_SIZE][BOARD_SIZE] = {
-    {2,1,1,1,1,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,2},
+    {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,2,1,1,1,2,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1},
@@ -89,7 +150,7 @@ const int fourthMap[BOARD_SIZE][BOARD_SIZE] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {5,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,3,4,4,0,1},
+    {1,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,3,4,4,0,1},
     {1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,1,0,0,0,2,1,1,2,0,0,0,0,0,0,0,0,0,1},
@@ -125,9 +186,11 @@ void Board::loadMap(int stage) {
 
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
-            map[y][x] = selectedMap[y][x];
+            map[y][x] = selectedMap[y][x] == GATE ? WALL : selectedMap[y][x];
         }
     }
+
+    placeRandomGates();
 }
 
 // 사이즈 반환

@@ -25,7 +25,7 @@ public:
     void to_loc(int& x1, int& y1, int x2, int y2) const;
     void move(ScoreManager& score, ItemManager& items);
     bool turn(int key);
-    void getGate(int& x, int& y);
+    bool getGate(int& x, int& y);
 };
 
 #endif

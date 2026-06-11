@@ -58,7 +58,7 @@ private:
         // }
 
         if (snake.missionClear) {
-            if (key == 'n' || key == 'N') {
+            if (currentStage < LAST_STAGE && (key == 'n' || key == 'N')) {
                 nextStage();
             }
             return;
