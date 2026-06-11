@@ -10,6 +10,7 @@ private:
     ItemManager items;
     ScoreManager score;
     bool running;
+    bool started;
     int currentStage;
     static const int LAST_STAGE = 4;
 
@@ -38,6 +39,7 @@ private:
         snake.loadFromMap();
         items = ItemManager();
         score = ScoreManager();
+        started = false;
         nodelay(stdscr, TRUE);
     }
 
@@ -66,12 +68,17 @@ private:
             return;
         }
 
-        snake.turn(key);
+        if (snake.turn(key)) {
+            started = true;
+        }
     }
 
     void update() {
+        if (!started) {
+            return;
+        }
+
         if (snake.gameOver || snake.missionClear) {
-            nodelay(stdscr, FALSE);
             return;
         }
 
@@ -98,7 +105,8 @@ private:
         drawInfo();
 
         if (snake.gameOver) {
-            mvprintw(board.getSize() + 8, 1, "Game Over - press q to exit");
+            mvprintw(board.getSize() + 7, 1, "Game Over - press q to exit");
+            mvprintw(board.getSize() + 8, 1, "Reason: %s", snake.gameOverReason);
         }
         else if (snake.missionClear) {
             if (currentStage < LAST_STAGE) {
@@ -108,12 +116,15 @@ private:
                 mvprintw(board.getSize() + 8, 1, "All Stages Clear - press q to exit");
             }
         }
+        else if (!started) {
+            mvprintw(board.getSize() + 7, 1, "Press an arrow key or WASD to start");
+        }
 
         refresh();
     }
 
 public:
-    GameManager() : running(true), currentStage(1) { snake.loadFromMap(); }
+    GameManager() : running(true), started(false), currentStage(1) { snake.loadFromMap(); }
 
     void run() {
         initScreen();

@@ -11,18 +11,20 @@ const int SIZE = 21;
 class snake_logic {
 public:
     steady_clock::time_point tick = steady_clock::now();
-    int body[362][2]{ {6,6}, {7,6}, {8,6} };
+    int body[362][2]{ {8,6}, {7,6}, {6,6} };
     int speed{ 120 };
     int length{ 3 };
     int max_length{ 361 };
-    char dir{ 'L' };
+    char dir{ 'R' };
+    bool turnLocked{ false };
     bool gameOver{ false };
     bool missionClear{ false };
+    const char* gameOverReason{ "" };
 
     void loadFromMap();
     void to_loc(int& x1, int& y1, int x2, int y2) const;
     void move(ScoreManager& score, ItemManager& items);
-    void turn(int key);
+    bool turn(int key);
     void getGate(int& x, int& y);
 };
 

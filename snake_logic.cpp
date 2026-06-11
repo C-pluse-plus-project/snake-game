@@ -34,6 +34,7 @@ void snake_logic::move(ScoreManager& score, ItemManager& items) {
     to_loc(frontX, frontY, body[0][0], body[0][1]);
 
     if (frontY < 0 || frontY >= SIZE || frontX < 0 || frontX >= SIZE) {
+        gameOverReason = "Out of bounds";
         gameOver = true;
         return;
     }
@@ -45,7 +46,17 @@ void snake_logic::move(ScoreManager& score, ItemManager& items) {
         target = map[frontY][frontX];
     }
 
-    if (target == WALL || target == IMMUNE_WALL || target == SNAKE_BODY) {
+    const bool movingIntoTail =
+        frontX == body[length - 1][0] && frontY == body[length - 1][1];
+
+    if (target == WALL || target == IMMUNE_WALL) {
+        gameOverReason = "Hit a wall";
+        gameOver = true;
+        return;
+    }
+
+    if ((target == SNAKE_BODY && !movingIntoTail) || target == SNAKE_HEAD) {
+        gameOverReason = "Hit yourself";
         gameOver = true;
         return;
     }
@@ -57,6 +68,7 @@ void snake_logic::move(ScoreManager& score, ItemManager& items) {
     }
 
     if (gameOver || length < 3) {
+        gameOverReason = "Length dropped below 3";
         gameOver = true;
         return;
     }
@@ -87,24 +99,31 @@ void snake_logic::move(ScoreManager& score, ItemManager& items) {
 
     score.updateLength(length);
     missionClear = score.isMissionClear(length);
+    turnLocked = false;
     tick = steady_clock::now();
 }
 
-void snake_logic::turn(int key) {
+bool snake_logic::turn(int key) {
+    if (turnLocked) {
+        return false;
+    }
+
     char next = dir;
 
     if (key == KEY_RIGHT || key == 'd' || key == 'D') next = 'R';
     else if (key == KEY_LEFT || key == 'a' || key == 'A') next = 'L';
     else if (key == KEY_UP || key == 'w' || key == 'W') next = 'U';
     else if (key == KEY_DOWN || key == 's' || key == 'S') next = 'D';
-    else return;
+    else return false;
 
     if ((next == 'R' && dir == 'L') || (next == 'L' && dir == 'R') ||
         (next == 'U' && dir == 'D') || (next == 'D' && dir == 'U')) {
-        return;
+        return false;
     }
 
     dir = next;
+    turnLocked = true;
+    return true;
 }
 
 void snake_logic::getGate(int& x, int& y) {
@@ -146,7 +165,9 @@ void snake_logic::loadFromMap() {
     length = count + 1;
     speed = 120;
     dir = 'L';
+    turnLocked = false;
     gameOver = false;
     missionClear = false;
+    gameOverReason = "";
     tick = steady_clock::now();
 }
