@@ -57,7 +57,7 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
     const bool movingIntoTail =
         frontX == body[length - 1][0] && frontY == body[length - 1][1];
 
-    if (target == WALL || target == IMMUNE_WALL) {
+    if (target == WALL || target == IMMUNE_WALL || target == TEMP_WALL) {
         gameOverReason = "Hit a wall";
         gameOver = true;
         return;

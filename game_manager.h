@@ -7,12 +7,14 @@
 #include "board.h"
 #include "item_score.h"
 #include "snake.h"
+#include "wall.h"
 
 class GameManager {
 private:
     Board board;
     Snake snake;
     ItemManager items;
+    TemporaryWallManager tempWalls;
     ScoreManager score;
     bool running;
     bool started;

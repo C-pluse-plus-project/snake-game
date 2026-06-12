@@ -28,6 +28,7 @@ void GameManager::nextStage() {
     board.loadMap(currentStage);
     snake.loadFromMap();
     items = ItemManager();
+    tempWalls = TemporaryWallManager();
     score = ScoreManager();
     started = false;
     nodelay(stdscr, TRUE);
@@ -67,6 +68,7 @@ void GameManager::update() {
     }
 
     items.update();
+    tempWalls.update();
     snake.move(score, items);
 }
 
@@ -75,7 +77,7 @@ void GameManager::drawInfo() const {
 
     mvprintw(y + 3, 1, "Stage: %d / %d", currentStage, LAST_STAGE);
     mvprintw(y + 4, 1, "Arrows/WASD: move | q: quit");
-    mvprintw(y + 5, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed");
+    mvprintw(y + 5, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed  T ActiveTempWall  t ReadyTempWall");
     mvprintw(y + 6, 1, "Direction: %c | Speed: %dms", snake.dir, snake.speed);
 }
 

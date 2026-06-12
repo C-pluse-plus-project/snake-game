@@ -19,6 +19,8 @@ const int GATE = 5;
 const int GROWTH_ITEM = 6;
 const int POISON_ITEM = 7;
 const int SPEED_ITEM = 8;
+const int TEMP_WALL = 9;
+const int TEMP_WALL_READY = 10;
 
 class ScoreManager {
 private:
