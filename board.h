@@ -1,3 +1,5 @@
+// board.h
+// Declares the Board class and shared map size used by the game screen.
 #ifndef BOARD_H
 #define BOARD_H
 
@@ -10,7 +12,7 @@ class Board {
 public:
     Board();
 
-    void loadMap(int stage);
+    void loadMap(const int stage);
 
     int getSize() const;
     int getCell(const int y, const int x) const;

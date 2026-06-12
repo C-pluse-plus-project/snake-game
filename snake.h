@@ -1,16 +1,16 @@
-#ifndef SNAKE_LOGIC_H
-#define SNAKE_LOGIC_H
+// snake.h
+// Declares the Snake class that owns snake state and movement rules.
+#ifndef SNAKE_H
+#define SNAKE_H
 
 #include <chrono>
 #include "item_score.h"
 
-using namespace std::chrono;
-
 const int SIZE = 21;
 
-class snake_logic {
+class Snake {
 public:
-    steady_clock::time_point tick = steady_clock::now();
+    std::chrono::steady_clock::time_point tick = std::chrono::steady_clock::now();
     int body[362][2]{ {8,6}, {7,6}, {6,6} };
     int speed{ 120 };
     int length{ 3 };
@@ -22,9 +22,9 @@ public:
     const char* gameOverReason{ "" };
 
     void loadFromMap();
-    void to_loc(int& x1, int& y1, int x2, int y2) const;
+    void to_loc(int& x1, int& y1, const int x2, const int y2) const;
     void move(ScoreManager& score, ItemManager& items);
-    bool turn(int key);
+    bool turn(const int key);
     bool getGate(int& x, int& y);
 };
 

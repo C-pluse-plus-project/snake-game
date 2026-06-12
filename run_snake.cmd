@@ -16,7 +16,9 @@ if not defined WSL_DIR (
     exit /b 1
 )
 
-wsl.exe --cd "%WSL_DIR%" -e bash -lc "exec ./snake_game"
+wsl.exe --cd "%WSL_DIR%" -e bash -lc "TERM=xterm make snake_game && TERM=xterm ./snake_game"
+set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
 pause
+exit /b %EXIT_CODE%

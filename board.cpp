@@ -1,67 +1,11 @@
+// board.cpp
+// Implements map loading, cell access, and ncurses drawing for game boards.
 #include "board.h"
+
+#include "gate.h"
 #include "item_score.h"
 
-#include <algorithm>
-#include <chrono>
-#include <random>
-#include <utility>
-#include <vector>
-
 int map[BOARD_SIZE][BOARD_SIZE];
-
-namespace {
-std::mt19937& gateRng() {
-    static std::mt19937 rng(
-        static_cast<unsigned int>(
-            std::chrono::steady_clock::now().time_since_epoch().count()));
-    return rng;
-}
-
-bool canEnterFromGate(int y, int x) {
-    if (y < 0 || y >= BOARD_SIZE || x < 0 || x >= BOARD_SIZE) {
-        return false;
-    }
-
-    const int cell = map[y][x];
-    return cell != WALL &&
-           cell != IMMUNE_WALL &&
-           cell != GATE &&
-           cell != SNAKE_HEAD &&
-           cell != SNAKE_BODY;
-}
-
-bool hasGateExit(int y, int x) {
-    if (y == 0) return canEnterFromGate(y + 1, x);
-    if (y == BOARD_SIZE - 1) return canEnterFromGate(y - 1, x);
-    if (x == 0) return canEnterFromGate(y, x + 1);
-    if (x == BOARD_SIZE - 1) return canEnterFromGate(y, x - 1);
-
-    return canEnterFromGate(y - 1, x) ||
-           canEnterFromGate(y + 1, x) ||
-           canEnterFromGate(y, x - 1) ||
-           canEnterFromGate(y, x + 1);
-}
-
-void placeRandomGates() {
-    std::vector<std::pair<int, int>> wallCells;
-
-    for (int y = 0; y < BOARD_SIZE; y++) {
-        for (int x = 0; x < BOARD_SIZE; x++) {
-            if (map[y][x] == WALL && hasGateExit(y, x)) {
-                wallCells.push_back({ y, x });
-            }
-        }
-    }
-
-    if (wallCells.size() < 2) {
-        return;
-    }
-
-    std::shuffle(wallCells.begin(), wallCells.end(), gateRng());
-    map[wallCells[0].first][wallCells[0].second] = GATE;
-    map[wallCells[1].first][wallCells[1].second] = GATE;
-}
-}
 
 const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
     {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
@@ -168,7 +112,7 @@ Board::Board() {
     loadMap(1);
 }
 
-void Board::loadMap(int stage) {
+void Board::loadMap(const int stage) {
     const int (*selectedMap)[BOARD_SIZE] = initialMap;
 
     if (stage == 1) {
@@ -190,44 +134,58 @@ void Board::loadMap(int stage) {
         }
     }
 
-    placeRandomGates();
+    Gate::placePair();
 }
 
-// 사이즈 반환
 int Board::getSize() const {
     return BOARD_SIZE;
 }
 
-// 
 int Board::getCell(const int y, const int x) const {
     return map[y][x];
 }
 
-// 
 void Board::setCell(const int y, const int x, const int value) {
     map[y][x] = value;
 }
 
-// 벽인지 검사
 bool Board::isWall(const int y, const int x) const {
-    return map[y][x] == 1 || map[y][x] == 2;
+    return map[y][x] == WALL || map[y][x] == IMMUNE_WALL;
 }
 
-// 숫자 처리된 맵 문자 및 기호로 변환하여 출력
 void Board::draw() const {
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
             char ch = ' ';
 
-            if (map[y][x] == 1) ch = '#';
-            else if (map[y][x] == 2) ch = 'X';
-            else if (map[y][x] == 3) ch = 'H';
-            else if (map[y][x] == 4) ch = 'B';
-            else if (map[y][x] == 5) ch = 'G';
-            else if (map[y][x] == 6) ch = '+';
-            else if (map[y][x] == 7) ch = '-';
-            else if (map[y][x] == 8) ch = 'S';
-            else if (map[y][x] == 9) ch = '~';
+            switch (map[y][x]) {
+            case WALL:
+                ch = '#';
+                break;
+            case IMMUNE_WALL:
+                ch = 'X';
+                break;
+            case SNAKE_HEAD:
+                ch = 'H';
+                break;
+            case SNAKE_BODY:
+                ch = 'B';
+                break;
+            case GATE:
+                ch = 'G';
+                break;
+            case GROWTH_ITEM:
+                ch = '+';
+                break;
+            case POISON_ITEM:
+                ch = '-';
+                break;
+            case SPEED_ITEM:
+                ch = 'S';
+                break;
+            default:
+                break;
+            }
 
             mvprintw(y + 1, x * 2 + 1, "%c ", ch);
         }

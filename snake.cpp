@@ -1,63 +1,11 @@
-#include "snake_logic.h"
+// snake.cpp
+// Implements snake movement, collision checks, direction changes, and stage reset.
+#include "snake.h"
+
+#include "gate.h"
 #include <ncurses.h>
 
-namespace {
-int dxFor(char dir) {
-    if (dir == 'R') return 1;
-    if (dir == 'L') return -1;
-    return 0;
-}
-
-int dyFor(char dir) {
-    if (dir == 'D') return 1;
-    if (dir == 'U') return -1;
-    return 0;
-}
-
-char oppositeOf(char dir) {
-    if (dir == 'R') return 'L';
-    if (dir == 'L') return 'R';
-    if (dir == 'U') return 'D';
-    return 'U';
-}
-
-char clockwiseOf(char dir) {
-    if (dir == 'R') return 'D';
-    if (dir == 'D') return 'L';
-    if (dir == 'L') return 'U';
-    return 'R';
-}
-
-char counterClockwiseOf(char dir) {
-    if (dir == 'R') return 'U';
-    if (dir == 'U') return 'L';
-    if (dir == 'L') return 'D';
-    return 'R';
-}
-
-bool isBlockedExitCell(int y, int x) {
-    if (y < 0 || y >= SIZE || x < 0 || x >= SIZE) {
-        return true;
-    }
-
-    const int cell = map[y][x];
-    return cell == WALL ||
-           cell == IMMUNE_WALL ||
-           cell == GATE ||
-           cell == SNAKE_HEAD ||
-           cell == SNAKE_BODY;
-}
-
-char borderExitDirection(int x, int y) {
-    if (y == 0) return 'D';
-    if (y == SIZE - 1) return 'U';
-    if (x == 0) return 'R';
-    if (x == SIZE - 1) return 'L';
-    return '\0';
-}
-}
-
-void snake_logic::to_loc(int& x1, int& y1, int x2, int y2) const {
+void Snake::to_loc(int& x1, int& y1, const int x2, const int y2) const {
     if (dir == 'R') {
         x1 = x2 + 1;
         y1 = y2;
@@ -76,12 +24,14 @@ void snake_logic::to_loc(int& x1, int& y1, int x2, int y2) const {
     }
 }
 
-void snake_logic::move(ScoreManager& score, ItemManager& items) {
+void Snake::move(ScoreManager& score, ItemManager& items) {
     if (gameOver || missionClear) {
         return;
     }
 
-    if (duration_cast<milliseconds>(steady_clock::now() - tick).count() < speed) {
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - tick).count();
+    if (elapsed < speed) {
         return;
     }
 
@@ -158,10 +108,10 @@ void snake_logic::move(ScoreManager& score, ItemManager& items) {
     score.updateLength(length);
     missionClear = score.isMissionClear(length);
     turnLocked = false;
-    tick = steady_clock::now();
+    tick = std::chrono::steady_clock::now();
 }
 
-bool snake_logic::turn(int key) {
+bool Snake::turn(const int key) {
     char next = dir;
 
     if (key == KEY_RIGHT || key == 'd' || key == 'D') next = 'R';
@@ -190,75 +140,31 @@ bool snake_logic::turn(int key) {
     return true;
 }
 
-bool snake_logic::getGate(int& x, int& y) {
-    const int entryX = x;
-    const int entryY = y;
-    int exitX = -1;
-    int exitY = -1;
-
-    for (int mapY = 0; mapY < SIZE; mapY++) {
-        for (int mapX = 0; mapX < SIZE; mapX++) {
-            if (map[mapY][mapX] == GATE && (mapX != entryX || mapY != entryY)) {
-                exitX = mapX;
-                exitY = mapY;
-            }
-        }
-    }
-
-    if (exitX == -1 || exitY == -1) {
-        gameOverReason = "Gate pair missing";
+bool Snake::getGate(int& x, int& y) {
+    const char* gateError = "";
+    if (!Gate::moveThrough(x, y, dir, x, y, dir, gateError)) {
+        gameOverReason = gateError;
         gameOver = true;
         return false;
     }
-
-    char exitDir = borderExitDirection(exitX, exitY);
-
-    if (exitDir == '\0') {
-        const char candidates[4] = {
-            dir,
-            clockwiseOf(dir),
-            counterClockwiseOf(dir),
-            oppositeOf(dir)
-        };
-
-        for (int i = 0; i < 4; i++) {
-            const int nextX = exitX + dxFor(candidates[i]);
-            const int nextY = exitY + dyFor(candidates[i]);
-            if (!isBlockedExitCell(nextY, nextX)) {
-                exitDir = candidates[i];
-                break;
-            }
-        }
-    }
-
-    if (exitDir == '\0') {
-        gameOverReason = "Blocked gate exit";
-        gameOver = true;
-        return false;
-    }
-
-    dir = exitDir;
-    x = exitX + dxFor(dir);
-    y = exitY + dyFor(dir);
     return true;
 }
 
-
-void snake_logic::loadFromMap() {
+void Snake::loadFromMap() {
     int count = 0;
 
-    for(int y=0; y<SIZE; y++){
-        for(int x=0; x<SIZE; x++){
-            if(map[y][x] == SNAKE_HEAD){
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++) {
+            if (map[y][x] == SNAKE_HEAD) {
                 body[0][0] = x;
                 body[0][1] = y;
             }
         }
     }
 
-    for(int y=0; y<SIZE; y++){
-        for(int x=0; x<SIZE; x++){
-            if(map[y][x] == SNAKE_BODY){
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++) {
+            if (map[y][x] == SNAKE_BODY) {
                 count++;
                 body[count][0] = x;
                 body[count][1] = y;
@@ -273,5 +179,5 @@ void snake_logic::loadFromMap() {
     gameOver = false;
     missionClear = false;
     gameOverReason = "";
-    tick = steady_clock::now();
+    tick = std::chrono::steady_clock::now();
 }

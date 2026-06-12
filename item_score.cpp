@@ -1,4 +1,12 @@
+// item_score.cpp
+// Implements score tracking, mission checks, and item spawning/lifetime logic.
 #include "item_score.h"
+
+#include "food.h"
+#include "poison.h"
+
+#include <utility>
+#include <vector>
 
 // =========================
 // ScoreManager 구현부
@@ -17,11 +25,11 @@ ScoreManager::ScoreManager() {
     missionPoison = 2;
     missionGate = 1;
 
-    startTime = steady_clock::now();
+    startTime = std::chrono::steady_clock::now();
 }
 
 // 현재 길이가 기존 최대 길이보다 크면 최대 길이 갱신
-void ScoreManager::updateLength(int currentLength) {
+void ScoreManager::updateLength(const int currentLength) {
     if (currentLength > maxLength) {
         maxLength = currentLength;
     }
@@ -48,19 +56,19 @@ void ScoreManager::addSpeedItem() {
 }
 
 // 아이템을 먹었을 때 길이, 속도, 점수를 한 번에 처리하는 함수
-void ScoreManager::applyItemEffect(int itemType, int& length, int& speed, bool& gameOver) {
+void ScoreManager::applyItemEffect(const int itemType, int& length, int& speed, bool& gameOver) {
     if (itemType == GROWTH_ITEM) {
         // Growth Item: 몸 길이 1 증가
-        length++;
+        length += Food::lengthDelta();
         addGrowth();
     }
     else if (itemType == POISON_ITEM) {
         // Poison Item: 몸 길이 1 감소
-        length--;
+        length += Poison::lengthDelta();
         addPoison();
 
         // 길이가 3보다 작아지면 Game Over
-        if (length < 3) {
+        if (Poison::isFatalLength(length)) {
             gameOver = true;
         }
     }
@@ -100,11 +108,12 @@ int ScoreManager::getMaxLength() const {
 
 // 게임 시작 후 지난 시간을 초 단위로 반환
 int ScoreManager::getElapsedTime() const {
-    return (int)duration_cast<seconds>(steady_clock::now() - startTime).count();
+    return (int)std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - startTime).count();
 }
 
 // Mission 달성 여부 확인
-bool ScoreManager::isMissionClear(int currentLength) const {
+bool ScoreManager::isMissionClear(const int currentLength) const {
     return currentLength >= missionLength &&
            growthCount >= missionGrowth &&
            poisonCount >= missionPoison &&
@@ -112,7 +121,7 @@ bool ScoreManager::isMissionClear(int currentLength) const {
 }
 
 // Score Board 출력
-void ScoreManager::draw(int startX, int currentLength) const {
+void ScoreManager::draw(const int startX, const int currentLength) const {
     mvprintw(1, startX, "Score Board");
 
     // B: 현재 길이 / 게임 중 최대 길이
@@ -151,7 +160,7 @@ void ScoreManager::draw(int startX, int currentLength) const {
 // =========================
 
 ItemManager::ItemManager()
-    : itemLifeTime(5000), rng(random_device{}()) {
+    : itemLifeTime(5000), rng(std::random_device{}()) {
     
     // 아이템 슬롯 초기화
     for (int i = 0; i < MAX_ITEMS; i++) {
@@ -176,20 +185,20 @@ int ItemManager::countActiveItems() const {
 }
 
 // 아이템을 생성할 수 있는 빈칸인지 확인
-bool ItemManager::isEmptyCell(int y, int x) const {
+bool ItemManager::isEmptyCell(const int y, const int x) const {
     return map[y][x] == EMPTY;
 }
 
 // 아이템 종류를 랜덤으로 결정
 int ItemManager::getRandomItemType() {
-    uniform_int_distribution<int> dist(1, 100);
+    std::uniform_int_distribution<int> dist(1, 100);
     int value = dist(rng);
 
-    if (value <= 45) {
-        return GROWTH_ITEM;      // 45%
+    if (value <= Food::spawnWeight()) {
+        return Food::type();     // 45%
     }
-    else if (value <= 90) {
-        return POISON_ITEM;      // 45%
+    else if (value <= Food::spawnWeight() + Poison::spawnWeight()) {
+        return Poison::type();   // 45%
     }
     else {
         return SPEED_ITEM;       // 10%
@@ -198,7 +207,7 @@ int ItemManager::getRandomItemType() {
 
 // 아이템 하나 생성
 bool ItemManager::spawnOneItem() {
-    vector<pair<int, int>> emptyCells;
+    std::vector<std::pair<int, int>> emptyCells;
 
     // map 전체를 돌면서 빈칸만 후보로 저장
     for (int y = 0; y < ITEM_SCORE_SIZE; y++) {
@@ -215,7 +224,7 @@ bool ItemManager::spawnOneItem() {
     }
 
     // 빈칸 후보 중 랜덤 위치 선택
-    uniform_int_distribution<int> posDist(0, (int)emptyCells.size() - 1);
+    std::uniform_int_distribution<int> posDist(0, (int)emptyCells.size() - 1);
     int index = posDist(rng);
 
     int y = emptyCells[index].first;
@@ -231,7 +240,7 @@ bool ItemManager::spawnOneItem() {
             items[i].x = x;
             items[i].type = itemType;
             items[i].active = true;
-            items[i].createdTime = steady_clock::now();
+            items[i].createdTime = std::chrono::steady_clock::now();
 
             // map에 아이템 표시
             map[y][x] = itemType;
@@ -245,7 +254,7 @@ bool ItemManager::spawnOneItem() {
 
 // 생성 후 5초가 지난 아이템 제거
 void ItemManager::removeExpiredItems() {
-    steady_clock::time_point now = steady_clock::now();
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 
     for (int i = 0; i < MAX_ITEMS; i++) {
         if (!items[i].active) {
@@ -253,7 +262,8 @@ void ItemManager::removeExpiredItems() {
         }
 
         long long elapsed =
-            duration_cast<milliseconds>(now - items[i].createdTime).count();
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - items[i].createdTime).count();
 
         if (elapsed >= itemLifeTime.count()) {
             int y = items[i].y;
@@ -283,7 +293,7 @@ void ItemManager::update() {
 }
 
 // 특정 좌표에 있는 아이템 종류 반환
-int ItemManager::getItemTypeAt(int y, int x) const {
+int ItemManager::getItemTypeAt(const int y, const int x) const {
     for (int i = 0; i < MAX_ITEMS; i++) {
         if (items[i].active && items[i].y == y && items[i].x == x) {
             return items[i].type;
@@ -294,7 +304,7 @@ int ItemManager::getItemTypeAt(int y, int x) const {
 }
 
 // 특정 좌표의 아이템 제거
-void ItemManager::removeItemAt(int y, int x) {
+void ItemManager::removeItemAt(const int y, const int x) {
     for (int i = 0; i < MAX_ITEMS; i++) {
         if (items[i].active && items[i].y == y && items[i].x == x) {
             items[i].active = false;
@@ -310,7 +320,7 @@ void ItemManager::removeItemAt(int y, int x) {
 }
 
 // 특정 좌표가 아이템 칸인지 확인
-bool ItemManager::isItemCell(int y, int x) const {
+bool ItemManager::isItemCell(const int y, const int x) const {
     for (int i = 0; i < MAX_ITEMS; i++) {
         if (items[i].active && items[i].y == y && items[i].x == x) {
             return true;
