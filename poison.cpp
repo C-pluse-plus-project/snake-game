@@ -2,7 +2,7 @@
 // Implements Poison Item metadata and failure rule.
 #include "poison.h"
 
-#include "item_score.h"
+#include "cell_types.h"
 
 int Poison::type() {
     return POISON_ITEM;

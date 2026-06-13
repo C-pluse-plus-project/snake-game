@@ -11,7 +11,7 @@ void GameManager::initScreen() {
     curs_set(0);
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
-    resize_term(30, 70);
+    resize_term(32, 90);
 }
 
 void GameManager::closeScreen() {
@@ -26,9 +26,10 @@ void GameManager::nextStage() {
 
     currentStage++;
     board.loadMap(currentStage);
-    snake.loadFromMap();
+    snake.loadFromMap(board);
     items = ItemManager();
     tempWalls = TemporaryWallManager();
+    tempWalls.reset(board);
     score = ScoreManager();
     started = false;
     nodelay(stdscr, TRUE);
@@ -42,14 +43,14 @@ void GameManager::handleInput() {
         return;
     }
 
-    if (snake.missionClear) {
+    if (snake.isMissionClear()) {
         if (currentStage < LAST_STAGE && (key == 'n' || key == 'N')) {
             nextStage();
         }
         return;
     }
 
-    if (snake.gameOver) {
+    if (snake.isGameOver()) {
         return;
     }
 
@@ -63,13 +64,13 @@ void GameManager::update() {
         return;
     }
 
-    if (snake.gameOver || snake.missionClear) {
+    if (snake.isGameOver() || snake.isMissionClear()) {
         return;
     }
 
-    items.update();
-    tempWalls.update();
-    snake.move(score, items);
+    items.update(board);
+    tempWalls.update(board);
+    snake.move(board, score, items);
 }
 
 void GameManager::drawInfo() const {
@@ -77,40 +78,44 @@ void GameManager::drawInfo() const {
 
     mvprintw(y + 3, 1, "Stage: %d / %d", currentStage, LAST_STAGE);
     mvprintw(y + 4, 1, "Arrows/WASD: move | q: quit");
-    mvprintw(y + 5, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed  T ActiveTempWall  t ReadyTempWall");
-    mvprintw(y + 6, 1, "Direction: %c | Speed: %dms", snake.dir, snake.speed);
+    mvprintw(y + 5, 1, "# Wall  X Immune  G Gate  + Growth  - Poison  S Speed");
+    mvprintw(y + 6, 1, "T ActiveTempWall  t ReadyTempWall");
+    mvprintw(y + 7, 1, "Direction: %c | Speed: %dms",
+             snake.getDirection(),
+             snake.getSpeed());
 }
 
 void GameManager::render() const {
-    clear();
+    erase();
 
     board.draw();
 
     const int scoreBoardX = board.getSize() * 2 + 5;
-    score.draw(scoreBoardX, snake.length);
+    score.draw(scoreBoardX, snake.getLength());
     drawInfo();
 
-    if (snake.gameOver) {
-        mvprintw(board.getSize() + 7, 1, "Game Over - press q to exit");
-        mvprintw(board.getSize() + 8, 1, "Reason: %s", snake.gameOverReason);
+    if (snake.isGameOver()) {
+        mvprintw(board.getSize() + 8, 1, "Game Over - press q to exit");
+        mvprintw(board.getSize() + 9, 1, "Reason: %s", snake.getGameOverReason());
     }
-    else if (snake.missionClear) {
+    else if (snake.isMissionClear()) {
         if (currentStage < LAST_STAGE) {
-            mvprintw(board.getSize() + 8, 1, "Mission Clear - press n for next stage");
+            mvprintw(board.getSize() + 9, 1, "Mission Clear - press n for next stage");
         }
         else {
-            mvprintw(board.getSize() + 8, 1, "All Stages Clear - press q to exit");
+            mvprintw(board.getSize() + 9, 1, "All Stages Clear - press q to exit");
         }
     }
     else if (!started) {
-        mvprintw(board.getSize() + 7, 1, "Press an arrow key or WASD to start");
+        mvprintw(board.getSize() + 8, 1, "Press an arrow key or WASD to start");
     }
 
     refresh();
 }
 
 GameManager::GameManager() : running(true), started(false), currentStage(1) {
-    snake.loadFromMap();
+    snake.loadFromMap(board);
+    tempWalls.reset(board);
 }
 
 void GameManager::run() {
@@ -120,7 +125,7 @@ void GameManager::run() {
         handleInput();
         update();
         render();
-        napms(10);
+        napms(20);
     }
 
     closeScreen();

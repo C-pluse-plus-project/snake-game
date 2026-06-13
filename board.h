@@ -3,12 +3,14 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include "cell_types.h"
+
 #include <ncurses.h>
 
-const int BOARD_SIZE = 21;
-extern int map[BOARD_SIZE][BOARD_SIZE];
-
 class Board {
+private:
+    int cells[BOARD_SIZE][BOARD_SIZE];
+
 public:
     Board();
 
@@ -18,6 +20,7 @@ public:
     int getCell(const int y, const int x) const;
     void setCell(const int y, const int x, const int value);
 
+    bool isInside(const int y, const int x) const;
     bool isWall(const int y, const int x) const;
     void draw() const;
 };

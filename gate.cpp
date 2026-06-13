@@ -3,7 +3,6 @@
 #include "gate.h"
 
 #include "board.h"
-#include "item_score.h"
 
 #include <algorithm>
 #include <chrono>
@@ -52,33 +51,30 @@ char counterClockwiseOf(const char dir) {
     return 'R';
 }
 
-bool isInside(const int y, const int x) {
-    return y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE;
-}
-
-bool isBlockedCell(const int y, const int x) {
-    if (!isInside(y, x)) {
+bool isBlockedCell(const Board& board, const int y, const int x) {
+    if (!board.isInside(y, x)) {
         return true;
     }
 
-    const int cell = map[y][x];
+    const int cell = board.getCell(y, x);
     return cell == WALL ||
            cell == IMMUNE_WALL ||
            cell == GATE ||
+           cell == TEMP_WALL ||
            cell == SNAKE_HEAD ||
            cell == SNAKE_BODY;
 }
 
-bool hasGateExit(const int y, const int x) {
-    if (y == 0) return !isBlockedCell(y + 1, x);
-    if (y == BOARD_SIZE - 1) return !isBlockedCell(y - 1, x);
-    if (x == 0) return !isBlockedCell(y, x + 1);
-    if (x == BOARD_SIZE - 1) return !isBlockedCell(y, x - 1);
+bool hasGateExit(const Board& board, const int y, const int x) {
+    if (y == 0) return !isBlockedCell(board, y + 1, x);
+    if (y == BOARD_SIZE - 1) return !isBlockedCell(board, y - 1, x);
+    if (x == 0) return !isBlockedCell(board, y, x + 1);
+    if (x == BOARD_SIZE - 1) return !isBlockedCell(board, y, x - 1);
 
-    return !isBlockedCell(y - 1, x) ||
-           !isBlockedCell(y + 1, x) ||
-           !isBlockedCell(y, x - 1) ||
-           !isBlockedCell(y, x + 1);
+    return !isBlockedCell(board, y - 1, x) ||
+           !isBlockedCell(board, y + 1, x) ||
+           !isBlockedCell(board, y, x - 1) ||
+           !isBlockedCell(board, y, x + 1);
 }
 
 char borderExitDirection(const int x, const int y) {
@@ -90,12 +86,12 @@ char borderExitDirection(const int x, const int y) {
 }
 }
 
-void Gate::placePair() {
+void Gate::placePair(Board& board) {
     std::vector<std::pair<int, int>> wallCells;
 
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
-            if (map[y][x] == WALL && hasGateExit(y, x)) {
+            if (board.getCell(y, x) == WALL && hasGateExit(board, y, x)) {
                 wallCells.push_back({ y, x });
             }
         }
@@ -106,11 +102,12 @@ void Gate::placePair() {
     }
 
     std::shuffle(wallCells.begin(), wallCells.end(), gateRng());
-    map[wallCells[0].first][wallCells[0].second] = GATE;
-    map[wallCells[1].first][wallCells[1].second] = GATE;
+    board.setCell(wallCells[0].first, wallCells[0].second, GATE);
+    board.setCell(wallCells[1].first, wallCells[1].second, GATE);
 }
 
-bool Gate::moveThrough(const int entryX,
+bool Gate::moveThrough(const Board& board,
+                       const int entryX,
                        const int entryY,
                        const char currentDir,
                        int& exitX,
@@ -122,7 +119,7 @@ bool Gate::moveThrough(const int entryX,
 
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
-            if (map[y][x] == GATE && (x != entryX || y != entryY)) {
+            if (board.getCell(y, x) == GATE && (x != entryX || y != entryY)) {
                 gateX = x;
                 gateY = y;
             }
@@ -147,7 +144,7 @@ bool Gate::moveThrough(const int entryX,
         for (int i = 0; i < 4; i++) {
             const int nextX = gateX + dxFor(candidates[i]);
             const int nextY = gateY + dyFor(candidates[i]);
-            if (!isBlockedCell(nextY, nextX)) {
+            if (!isBlockedCell(board, nextY, nextX)) {
                 selectedDir = candidates[i];
                 break;
             }

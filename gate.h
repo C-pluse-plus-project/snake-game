@@ -4,12 +4,15 @@
 #ifndef GATE_H
 #define GATE_H
 
+class Board;
+
 class Gate {
 public:
-    static void placePair();
-    static bool moveThrough(int entryX,
-                            int entryY,
-                            char currentDir,
+    static void placePair(Board& board);
+    static bool moveThrough(const Board& board,
+                            const int entryX,
+                            const int entryY,
+                            const char currentDir,
                             int& exitX,
                             int& exitY,
                             char& exitDir,

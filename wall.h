@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+class Board;
+
 class TemporaryWallManager {
 private:
     struct TemporaryWall {
@@ -27,17 +29,18 @@ private:
     std::mt19937 rng;
 
     int countActiveWalls() const;
-    bool isSpawnablePoint(const int y, const int x) const;
+    bool isSpawnablePoint(const Board& board, const int y, const int x) const;
     bool isAlreadyActive(const int y, const int x) const;
-    bool spawnOneWall();
-    void removeExpiredWalls();
-    void restoreInactiveMarks();
+    bool spawnOneWall(Board& board);
+    void removeExpiredWalls(Board& board);
+    void restoreInactiveMarks(Board& board);
 
 public:
     TemporaryWallManager();
 
-    void update();
-    void clear();
+    void reset(Board& board);
+    void update(Board& board);
+    void clear(Board& board);
 };
 
 #endif

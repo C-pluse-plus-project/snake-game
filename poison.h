@@ -8,7 +8,7 @@ public:
     static int type();
     static int spawnWeight();
     static int lengthDelta();
-    static bool isFatalLength(int length);
+    static bool isFatalLength(const int length);
 };
 
 #endif

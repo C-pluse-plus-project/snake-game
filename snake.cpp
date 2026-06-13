@@ -3,28 +3,45 @@
 #include "snake.h"
 
 #include "gate.h"
+
 #include <ncurses.h>
 
-void Snake::to_loc(int& x1, int& y1, const int x2, const int y2) const {
+Snake::Snake()
+    : tick(std::chrono::steady_clock::now()),
+      body{ {8, 6}, {7, 6}, {6, 6} },
+      speed(120),
+      length(3),
+      maxLength(MAX_BODY_CELLS),
+      dir('R'),
+      turnLocked(false),
+      gameOver(false),
+      missionClear(false),
+      gameOverReason("") {
+}
+
+void Snake::toNextLocation(int& nextX,
+                           int& nextY,
+                           const int currentX,
+                           const int currentY) const {
     if (dir == 'R') {
-        x1 = x2 + 1;
-        y1 = y2;
+        nextX = currentX + 1;
+        nextY = currentY;
     }
     else if (dir == 'L') {
-        x1 = x2 - 1;
-        y1 = y2;
+        nextX = currentX - 1;
+        nextY = currentY;
     }
     else if (dir == 'U') {
-        x1 = x2;
-        y1 = y2 - 1;
+        nextX = currentX;
+        nextY = currentY - 1;
     }
     else if (dir == 'D') {
-        x1 = x2;
-        y1 = y2 + 1;
+        nextX = currentX;
+        nextY = currentY + 1;
     }
 }
 
-void Snake::move(ScoreManager& score, ItemManager& items) {
+void Snake::move(Board& board, ScoreManager& score, ItemManager& items) {
     if (gameOver || missionClear) {
         return;
     }
@@ -37,21 +54,21 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
 
     int frontX = 0;
     int frontY = 0;
-    to_loc(frontX, frontY, body[0][0], body[0][1]);
+    toNextLocation(frontX, frontY, body[0][0], body[0][1]);
 
-    if (frontY < 0 || frontY >= SIZE || frontX < 0 || frontX >= SIZE) {
+    if (!board.isInside(frontY, frontX)) {
         gameOverReason = "Out of bounds";
         gameOver = true;
         return;
     }
 
-    int target = map[frontY][frontX];
+    int target = board.getCell(frontY, frontX);
     if (target == GATE) {
         score.addGate();
-        if (!getGate(frontX, frontY)) {
+        if (!moveThroughGate(board, frontX, frontY)) {
             return;
         }
-        target = map[frontY][frontX];
+        target = board.getCell(frontY, frontX);
     }
 
     const bool movingIntoTail =
@@ -72,7 +89,7 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
     const int oldLength = length;
     if (target == GROWTH_ITEM || target == POISON_ITEM || target == SPEED_ITEM) {
         score.applyItemEffect(target, length, speed, gameOver);
-        items.removeItemAt(frontY, frontX);
+        items.removeItemAt(board, frontY, frontX);
     }
 
     if (gameOver || length < 3) {
@@ -81,7 +98,7 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
         return;
     }
 
-    if (length > max_length) {
+    if (length > maxLength) {
         missionClear = true;
         return;
     }
@@ -89,8 +106,8 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
     for (int i = 0; i < oldLength; i++) {
         const int x = body[i][0];
         const int y = body[i][1];
-        if (map[y][x] == SNAKE_HEAD || map[y][x] == SNAKE_BODY) {
-            map[y][x] = EMPTY;
+        if (board.getCell(y, x) == SNAKE_HEAD || board.getCell(y, x) == SNAKE_BODY) {
+            board.setCell(y, x, EMPTY);
         }
     }
 
@@ -102,7 +119,7 @@ void Snake::move(ScoreManager& score, ItemManager& items) {
     body[0][1] = frontY;
 
     for (int i = 0; i < length; i++) {
-        map[body[i][1]][body[i][0]] = (i == 0) ? SNAKE_HEAD : SNAKE_BODY;
+        board.setCell(body[i][1], body[i][0], i == 0 ? SNAKE_HEAD : SNAKE_BODY);
     }
 
     score.updateLength(length);
@@ -140,9 +157,9 @@ bool Snake::turn(const int key) {
     return true;
 }
 
-bool Snake::getGate(int& x, int& y) {
+bool Snake::moveThroughGate(const Board& board, int& x, int& y) {
     const char* gateError = "";
-    if (!Gate::moveThrough(x, y, dir, x, y, dir, gateError)) {
+    if (!Gate::moveThrough(board, x, y, dir, x, y, dir, gateError)) {
         gameOverReason = gateError;
         gameOver = true;
         return false;
@@ -150,21 +167,21 @@ bool Snake::getGate(int& x, int& y) {
     return true;
 }
 
-void Snake::loadFromMap() {
+void Snake::loadFromMap(const Board& board) {
     int count = 0;
 
-    for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++) {
-            if (map[y][x] == SNAKE_HEAD) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE; x++) {
+            if (board.getCell(y, x) == SNAKE_HEAD) {
                 body[0][0] = x;
                 body[0][1] = y;
             }
         }
     }
 
-    for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++) {
-            if (map[y][x] == SNAKE_BODY) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE; x++) {
+            if (board.getCell(y, x) == SNAKE_BODY) {
                 count++;
                 body[count][0] = x;
                 body[count][1] = y;
@@ -180,4 +197,28 @@ void Snake::loadFromMap() {
     missionClear = false;
     gameOverReason = "";
     tick = std::chrono::steady_clock::now();
+}
+
+int Snake::getLength() const {
+    return length;
+}
+
+int Snake::getSpeed() const {
+    return speed;
+}
+
+char Snake::getDirection() const {
+    return dir;
+}
+
+bool Snake::isGameOver() const {
+    return gameOver;
+}
+
+bool Snake::isMissionClear() const {
+    return missionClear;
+}
+
+const char* Snake::getGameOverReason() const {
+    return gameOverReason;
 }

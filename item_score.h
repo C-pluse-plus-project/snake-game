@@ -3,24 +3,13 @@
 #ifndef ITEM_SCORE_H
 #define ITEM_SCORE_H
 
+#include "cell_types.h"
+
 #include <chrono>
 #include <ncurses.h>
 #include <random>
 
-const int ITEM_SCORE_SIZE = 21;
-extern int map[ITEM_SCORE_SIZE][ITEM_SCORE_SIZE];
-
-const int EMPTY = 0;
-const int WALL = 1;
-const int IMMUNE_WALL = 2;
-const int SNAKE_HEAD = 3;
-const int SNAKE_BODY = 4;
-const int GATE = 5;
-const int GROWTH_ITEM = 6;
-const int POISON_ITEM = 7;
-const int SPEED_ITEM = 8;
-const int TEMP_WALL = 9;
-const int TEMP_WALL_READY = 10;
+class Board;
 
 class ScoreManager {
 private:
@@ -76,17 +65,17 @@ private:
     std::mt19937 rng;
 
     int countActiveItems() const;
-    bool isEmptyCell(const int y, const int x) const;
+    bool isEmptyCell(const Board& board, const int y, const int x) const;
     int getRandomItemType();
-    bool spawnOneItem();
-    void removeExpiredItems();
+    bool spawnOneItem(Board& board);
+    void removeExpiredItems(Board& board);
 
 public:
     ItemManager();
 
-    void update();
+    void update(Board& board);
     int getItemTypeAt(const int y, const int x) const;
-    void removeItemAt(const int y, const int x);
+    void removeItemAt(Board& board, const int y, const int x);
     bool isItemCell(const int y, const int x) const;
 };
 

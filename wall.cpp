@@ -1,12 +1,9 @@
 // wall.cpp
-// Implements temporary wall logic.
-// Only cells marked as 9 in board.cpp are used as possible temporary wall positions.
+// Implements temporary wall logic for board-marked spawn positions.
 #include "wall.h"
 
 #include "board.h"
-#include "item_score.h"
 
-#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -19,17 +16,27 @@ TemporaryWallManager::TemporaryWallManager()
         walls[i].x = 0;
         walls[i].active = false;
     }
+}
 
-    // Treat every 9 placed in board.cpp as a spawn point.
-    // The inactive/passable state is shown as lowercase t.
+void TemporaryWallManager::reset(Board& board) {
+    spawnPoints.clear();
+
+    for (int i = 0; i < MAX_TEMP_WALLS; i++) {
+        walls[i].y = 0;
+        walls[i].x = 0;
+        walls[i].active = false;
+    }
+
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
-            if (map[y][x] == TEMP_WALL) {
+            if (board.getCell(y, x) == TEMP_WALL) {
                 spawnPoints.push_back({ y, x });
-                map[y][x] = TEMP_WALL_READY;
+                board.setCell(y, x, TEMP_WALL_READY);
             }
         }
     }
+
+    lastSpawnTime = std::chrono::steady_clock::now();
 }
 
 int TemporaryWallManager::countActiveWalls() const {
@@ -54,24 +61,23 @@ bool TemporaryWallManager::isAlreadyActive(const int y, const int x) const {
     return false;
 }
 
-bool TemporaryWallManager::isSpawnablePoint(const int y, const int x) const {
-    if (y <= 0 || y >= BOARD_SIZE - 1 || x <= 0 || x >= BOARD_SIZE - 1) {
+bool TemporaryWallManager::isSpawnablePoint(const Board& board, const int y, const int x) const {
+    if (!board.isInside(y, x) || y == 0 || y == BOARD_SIZE - 1 ||
+        x == 0 || x == BOARD_SIZE - 1) {
         return false;
     }
 
-    // A temporary wall can appear only on a saved 9-position that is currently
-    // shown as lowercase t. This prevents overwriting snake, items, gates, etc.
-    return map[y][x] == TEMP_WALL_READY && !isAlreadyActive(y, x);
+    return board.getCell(y, x) == TEMP_WALL_READY && !isAlreadyActive(y, x);
 }
 
-bool TemporaryWallManager::spawnOneWall() {
+bool TemporaryWallManager::spawnOneWall(Board& board) {
     if (spawnPoints.empty()) {
         return false;
     }
 
     std::vector<std::pair<int, int>> candidates;
     for (const auto& point : spawnPoints) {
-        if (isSpawnablePoint(point.first, point.second)) {
+        if (isSpawnablePoint(board, point.first, point.second)) {
             candidates.push_back(point);
         }
     }
@@ -80,7 +86,7 @@ bool TemporaryWallManager::spawnOneWall() {
         return false;
     }
 
-    std::uniform_int_distribution<int> posDist(0, (int)candidates.size() - 1);
+    std::uniform_int_distribution<int> posDist(0, static_cast<int>(candidates.size()) - 1);
     const int index = posDist(rng);
     const int y = candidates[index].first;
     const int x = candidates[index].second;
@@ -91,7 +97,7 @@ bool TemporaryWallManager::spawnOneWall() {
             walls[i].x = x;
             walls[i].active = true;
             walls[i].createdTime = std::chrono::steady_clock::now();
-            map[y][x] = TEMP_WALL;
+            board.setCell(y, x, TEMP_WALL);
             return true;
         }
     }
@@ -99,7 +105,7 @@ bool TemporaryWallManager::spawnOneWall() {
     return false;
 }
 
-void TemporaryWallManager::removeExpiredWalls() {
+void TemporaryWallManager::removeExpiredWalls(Board& board) {
     const auto now = std::chrono::steady_clock::now();
 
     for (int i = 0; i < MAX_TEMP_WALLS; i++) {
@@ -111,49 +117,43 @@ void TemporaryWallManager::removeExpiredWalls() {
             now - walls[i].createdTime);
 
         if (elapsed >= wallLifeTime) {
-            if (map[walls[i].y][walls[i].x] == TEMP_WALL) {
-                map[walls[i].y][walls[i].x] = TEMP_WALL_READY;
+            if (board.getCell(walls[i].y, walls[i].x) == TEMP_WALL) {
+                board.setCell(walls[i].y, walls[i].x, TEMP_WALL_READY);
             }
             walls[i].active = false;
         }
     }
 }
 
-
-void TemporaryWallManager::restoreInactiveMarks() {
+void TemporaryWallManager::restoreInactiveMarks(Board& board) {
     for (const auto& point : spawnPoints) {
         const int y = point.first;
         const int x = point.second;
 
-        if (!isAlreadyActive(y, x) && map[y][x] == EMPTY) {
-            map[y][x] = TEMP_WALL_READY;
+        if (!isAlreadyActive(y, x) && board.getCell(y, x) == EMPTY) {
+            board.setCell(y, x, TEMP_WALL_READY);
         }
     }
 }
 
-void TemporaryWallManager::update() {
-    removeExpiredWalls();
-    restoreInactiveMarks();
+void TemporaryWallManager::update(Board& board) {
+    removeExpiredWalls(board);
+    restoreInactiveMarks(board);
 
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - lastSpawnTime);
 
     if (elapsed >= spawnInterval && countActiveWalls() < MAX_TEMP_WALLS) {
-        if (spawnOneWall()) {
-            lastSpawnTime = now;
-        }
-        else {
-            // Avoid trying every frame when every marked point is occupied.
-            lastSpawnTime = now;
-        }
+        spawnOneWall(board);
+        lastSpawnTime = now;
     }
 }
 
-void TemporaryWallManager::clear() {
+void TemporaryWallManager::clear(Board& board) {
     for (int i = 0; i < MAX_TEMP_WALLS; i++) {
-        if (walls[i].active && map[walls[i].y][walls[i].x] == TEMP_WALL) {
-            map[walls[i].y][walls[i].x] = TEMP_WALL_READY;
+        if (walls[i].active && board.getCell(walls[i].y, walls[i].x) == TEMP_WALL) {
+            board.setCell(walls[i].y, walls[i].x, TEMP_WALL_READY);
         }
 
         walls[i].active = false;

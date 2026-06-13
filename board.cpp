@@ -3,10 +3,8 @@
 #include "board.h"
 
 #include "gate.h"
-#include "item_score.h"
 
-int map[BOARD_SIZE][BOARD_SIZE];
-
+namespace {
 const int initialMap[BOARD_SIZE][BOARD_SIZE] = {
     {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -106,7 +104,7 @@ const int fourthMap[BOARD_SIZE][BOARD_SIZE] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2}
 };
-
+}
 
 Board::Board() {
     loadMap(1);
@@ -130,11 +128,11 @@ void Board::loadMap(const int stage) {
 
     for (int y = 0; y < BOARD_SIZE; y++) {
         for (int x = 0; x < BOARD_SIZE; x++) {
-            map[y][x] = selectedMap[y][x] == GATE ? WALL : selectedMap[y][x];
+            cells[y][x] = selectedMap[y][x] == GATE ? WALL : selectedMap[y][x];
         }
     }
 
-    Gate::placePair();
+    Gate::placePair(*this);
 }
 
 int Board::getSize() const {
@@ -142,15 +140,19 @@ int Board::getSize() const {
 }
 
 int Board::getCell(const int y, const int x) const {
-    return map[y][x];
+    return cells[y][x];
 }
 
 void Board::setCell(const int y, const int x, const int value) {
-    map[y][x] = value;
+    cells[y][x] = value;
+}
+
+bool Board::isInside(const int y, const int x) const {
+    return y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE;
 }
 
 bool Board::isWall(const int y, const int x) const {
-    return map[y][x] == WALL || map[y][x] == IMMUNE_WALL || map[y][x] == TEMP_WALL;
+    return cells[y][x] == WALL || cells[y][x] == IMMUNE_WALL || cells[y][x] == TEMP_WALL;
 }
 
 void Board::draw() const {
@@ -158,7 +160,7 @@ void Board::draw() const {
         for (int x = 0; x < BOARD_SIZE; x++) {
             char ch = ' ';
 
-            switch (map[y][x]) {
+            switch (cells[y][x]) {
             case WALL:
                 ch = '#';
                 break;

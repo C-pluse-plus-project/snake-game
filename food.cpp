@@ -2,7 +2,7 @@
 // Implements Growth Item metadata and effect values.
 #include "food.h"
 
-#include "item_score.h"
+#include "cell_types.h"
 
 int Food::type() {
     return GROWTH_ITEM;
