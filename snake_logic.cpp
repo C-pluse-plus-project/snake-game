@@ -48,7 +48,14 @@ void snake_logic::move() { // 뱀 이동 함수
 }
 void snake_logic::turn() { // 뱀 방향 전환 함수       
     if (_kbhit()) { // 키보드 입력이 존재할 때 키보드 입력 저장       
-        char temp = _getch();       
+        char temp = _getch();
+
+        switch (temp) {
+            case 'w': case 'W': temp = 'U'; break; // 위(Up)
+            case 'a': case 'A': temp = 'L'; break; // 좌(Left)
+            case 's': case 'S': temp = 'D'; break; // 아래(Down)
+            case 'd': case 'D': temp = 'R'; break; // 우(Right)
+        }
         if ((temp == 'R' && dir == 'L') || (temp == 'L' && dir == 'R') || (temp == 'U' && dir == 'D') || (temp == 'D' && dir == 'U')) { // 진행방향과 정반대로 입력한 경우
             //게임 종료 함수 호출
             return;
